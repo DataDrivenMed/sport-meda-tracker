@@ -1,0 +1,38 @@
+name: Weekly Indian Sports Mentions
+permissions: {contents: write}
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'    # Every Monday at 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+
+      - run: pip install -r requirements.txt
+
+      - name: Fetch RSS feeds
+        run: python src/fetch_rss.py
+
+      - name: Count mentions
+        run: python src/count_mentions.py
+
+      - name: Build weekly digest
+        run: python src/make_digest.py
+
+      - name: Build HTML page
+        run: python src/md_to_html.py
+
+      - name: Commit & push
+        run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GH-Actions Bot"
+          git add data/ digests/ docs/
+          git commit -m "Weekly update: $(date -u '+%Y-%m-%d')" || echo "No changes"
+          git push
